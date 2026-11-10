@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: git/go.mod
           cache-dependency-path: git/go.sum
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: git/go.mod
           cache-dependency-path: git/go.sum
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: git/go.mod
           cache-dependency-path: git/go.sum
@@ -78,7 +78,7 @@ jobs:
         arch: [amd64, arm64, riscv64, loong64, ppc64le, s390x]
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: git/go.mod
           cache-dependency-path: git/go.sum
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: git/go.mod
           cache-dependency-path: git/go.sum
