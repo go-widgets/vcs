@@ -1,0 +1,100 @@
+name: ci-git
+
+# The git driver is a nested module (github.com/go-widgets/vcs/git, tags
+# git/vX.Y.Z), so the root workflow's ./... never builds it: this one does.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: git
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: git/go.mod
+          cache-dependency-path: git/go.sum
+      - name: vet
+        run: go vet ./...
+      - name: vet (js/wasm)
+        shell: bash
+        run: GOOS=js GOARCH=wasm go vet ./...
+      - name: test
+        run: go test -race -count=1 ./...
+      - name: coverage gate (100%)
+        shell: bash
+        run: |
+          go test -count=1 -coverprofile=cov.out ./...
+          go tool cover -func=cov.out | tee cov.txt
+          grep -q 'total:.*100.0%' cov.txt || { echo "coverage below 100%"; exit 1; }
+
+  linux-386:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: git/go.mod
+          cache-dependency-path: git/go.sum
+      - name: test (32-bit int)
+        env:
+          GOARCH: "386"
+        run: go test -count=1 ./...
+
+  # Paths read out of .git/index are untrusted: the one parser here is fuzzed.
+  fuzz:
+    name: fuzz smoke FuzzCleanPath
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: git/go.mod
+          cache-dependency-path: git/go.sum
+      - run: go test -run '^$' -fuzz '^FuzzCleanPath$' -fuzztime 45s .
+
+  # Every go-widgets module cross-compiles for the six 64-bit Linux
+  # architectures, s390x the big-endian one. vet compiles the tests too.
+  cross:
+    name: cross linux/${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64, riscv64, loong64, ppc64le, s390x]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: git/go.mod
+          cache-dependency-path: git/go.sum
+      - name: vet, tests included
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: "0"
+        run: go vet ./...
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: git/go.mod
+          cache-dependency-path: git/go.sum
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
